@@ -128,7 +128,11 @@ alias gec='git_edit_config'
 # What I changed on this branch
 alias glt='git log --graph --abbrev-commit --decorate --first-parent --pretty=short HEAD'
 
-# Additional commands from Jacek
+# Commands from Steven
+unalias gl
+gl() { git log --oneline -n ${@:-10} }
+
+# Commands from Jacek
 alias my_changes="git log main..HEAD --name-only --pretty=format: | sort | uniq"
 alias my_changes_in_commits="git log main..HEAD --name-only"
 
@@ -136,4 +140,3 @@ diff_with_main() { git diff "$(git merge-base main @)" "@"; }
 
 alias branch-files-changed="diff_with_main --name-only"
 alias open-changed-files="git diff main --name-only | xargs code"
-

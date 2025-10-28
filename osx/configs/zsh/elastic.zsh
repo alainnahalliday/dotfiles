@@ -1,11 +1,16 @@
 # ------------------------------------------------------------------------------
-# Vault (secrets storage)
-# https://github.com/elastic/infra/blob/master/docs/vault/README.md
+# Init
 
 echo "Loading - elastic.zsh"
 
+# ------------------------------------------------------------------------------
+# Vault (secrets storage)
+# https://github.com/elastic/infra/blob/master/docs/vault/README.md
+
 #export VAULT_ADDR=https://secrets.elastic.co
 export VAULT_ADDR=https://secrets.elastic.co:8200
+
+alias vault-login='vault login -method oidc'
 
 # ------------------------------------------------------------------------------
 # Kibana and Security Solution (SIEM)
@@ -22,17 +27,18 @@ kibana-init() {
   echo "ES_DATA_HOME=${ES_DATA_HOME}"
 
   # Delete the folder with Elasticsearch database
-  alias clean-es-data='rm -rf $ES_DATA_HOME'
+  alias clean-es-data='echo "Cleaning KIBANA_VERSION=${KIBANA_VERSION}" && rm -rf $ES_DATA_HOME && echo ".. Done!"'
 
   # Start bootstrap process because something in package.json changed
   alias start-bootstrap='nvm use && yarn kbn bootstrap && node scripts/build_kibana_platform_plugins'
   # alias b="header 'ONLY BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap"
-  # alias be="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH for \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-es"
-  # alias bes="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH SERVERLESS \"kibana-$KIBANA_VERSION\"  on \"$CURRENT_BRANCH\" branch/version' && start-es-serverless"
+  alias start-bes="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH for \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-es"
+  alias start-bess="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH SERVERLESS \"kibana-$KIBANA_VERSION\"  on \"$CURRENT_BRANCH\" branch/version' && start-es-serverless"
 
 
   # Start Elasticsearch
   alias start-es='yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME}'
+  alias start-es-no-expensive-queries='yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E search.allow_expensive_queries=false -E logger.org.elasticsearch.discovery=DEBUG'
   alias start-es-serverless='yarn es serverless --projectType security'
 
   # Start Kibana
@@ -81,8 +87,10 @@ kibana-init() {
   #   node --inspect-brk x-pack/scripts/functional_tests_server --config x-pack/test/security_solution_api_integration/test_suites/path/to/config.ts
 
   # node x-pack/scripts/functional_tests_server --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts
-
   # node x-pack/scripts/functional_test_runner --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts --include x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/bootstrap_prebuilt_rules.ts
+
+  alias fts87='node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
+  alias ftr87='node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
 
   alias test-integration-lists='node ./x-pack/scripts/functional_tests --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
   alias test-integration-server-lists='node ./x-pack/scripts/functional_tests_server --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
@@ -110,6 +118,7 @@ kibana-init() {
   # Extra stuff
   alias pr-files-by-owner='f() { (cd ${CODE_HOME}/elastic/kibana-operations/triage && node ./code-owners.js "$@"); unset -f f; }; f'
   alias precommit='node scripts/precommit_hook.js'
+  alias quick-checks='yarn quick-checks'
 }
 
 # Looks at name of current directory ($PWD) and replaces `kibana-` with empty string.
@@ -117,7 +126,7 @@ kibana-init() {
 # - If you are in `/home/user/kibana-2nd` it will run `kibana-init 2nd`
 kbn() {
   PWD_DIR="${PWD##*/}"
-  echo "${PWD_DIR/kibana-/}"
+  echo "kibana-init ${PWD_DIR/kibana-/}"
   kibana-init "${PWD_DIR/kibana-/}"
 }
 
