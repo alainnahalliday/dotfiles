@@ -19,12 +19,38 @@ alias vault-login='vault login -method oidc'
 # Wrapping aliases in function so they can be updated w/ version.
 kibana-init() {
   export KIBANA_VERSION=${1:-main}
-  export KIBANA_HOME="$CODE_HOME/sdesalas/kibana-$KIBANA_VERSION"
+  export KIBANA_HOME="$CODE_HOME/$USERNAME/kibana-$KIBANA_VERSION"
   export ES_DATA_HOME="$DEV_HOME/elastic/es-data-$KIBANA_VERSION"
   export PLUGIN_PATH="x-pack/solutions/security/plugins/security_solution"
 
+  # Each kibana folder runs on different ports
+  # Bear in mind the ports for Kibana "proxy" and ES "transport"
+  declare -A KIBANA_PORTS
+  declare -A ES_PORTS
+  KIBANA_PORTS[main]=5601
+  KIBANA_PORTS[2nd]=5602
+  KIBANA_PORTS[3rd]=5603
+  KIBANA_PORTS[4th]=5604
+  KIBANA_PORTS["9.0"]=5605
+  KIBANA_PORTS["9.1"]=5606
+  ES_PORTS[main]=9200
+  ES_PORTS[2nd]=9201
+  ES_PORTS[3rd]=9202
+  ES_PORTS[4th]=9203
+  ES_PORTS["9.0"]=9204
+  ES_PORTS["9.1"]=9205
+  KIBANA_DEV_PORT=${KIBANA_PORTS[$KIBANA_VERSION]:-5601}
+  KIBANA_PROXY_PORT=$((KIBANA_DEV_PORT + 10))
+  ES_DEV_PORT=${ES_PORTS[$KIBANA_VERSION]:-9200}
+  ES_TRANSPORT_PORT=$((ES_DEV_PORT + 100))
+
+  # Output some useful info
   echo "KIBANA_HOME=${KIBANA_HOME}"
   echo "ES_DATA_HOME=${ES_DATA_HOME}"
+  echo "KIBANA_DEV_PORT=${KIBANA_DEV_PORT}"
+  echo "KIBANA_PROXY_PORT=${KIBANA_PROXY_PORT}"
+  echo "ES_DEV_PORT=${ES_DEV_PORT}"
+  echo "ES_TRANSPORT_PORT=${ES_TRANSPORT_PORT}"
 
   # Delete the folder with Elasticsearch database
   alias clean-es-data='echo "Cleaning KIBANA_VERSION=${KIBANA_VERSION}" && rm -rf $ES_DATA_HOME && echo ".. Done!"'
@@ -37,15 +63,15 @@ kibana-init() {
 
 
   # Start Elasticsearch
-  alias start-es='yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME}'
+  alias start-es='yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E http.port=${ES_DEV_PORT} -E transport.port=${ES_TRANSPORT_PORT}'
   alias start-es-no-expensive-queries='yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E search.allow_expensive_queries=false -E logger.org.elasticsearch.discovery=DEBUG'
   alias start-es-serverless='yarn es serverless --projectType security'
 
   # Start Kibana
-  alias start-kibana='yarn start --server.basePath="/kbn"'
+  alias start-kibana='yarn start --server.basePath="/kbn" --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
   alias start-kibana-serverless='yarn serverless-security'
-  alias debug-kibana='yarn debug  --elasticsearch.hosts="http://localhost:${DEV_ES_HTTP_PORT}" --server.port=${DEV_KIBANA_HTTP_PORT} --server.basePath="/kbn" --dev.basePathProxyTarget=${DEV_KIBANA_BASE_PATH_PROXY_TARGET_PORT}'
-  alias debug-break-kibana='yarn debug-break  --elasticsearch.hosts="http://localhost:${DEV_ES_HTTP_PORT}" --server.port=${DEV_KIBANA_HTTP_PORT} --server.basePath="/kbn" --dev.basePathProxyTarget=${DEV_KIBANA_BASE_PATH_PROXY_TARGET_PORT}'
+  alias debug-kibana='yarn debug --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
+  alias debug-break-kibana='yarn debug-break --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=5601 --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
 
   alias fe="header 'STARTING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-kibana"
   alias fes="header 'STARTING SERVERLESS \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-kibana-serverless"
@@ -76,6 +102,29 @@ kibana-init() {
   alias test-tdd='f() { TESTS_PATH=${1:-""}; node x-pack/scripts/jest.js $TESTS_PATH --watch -o; };f'
   alias debug-tdd='f() { TESTS_PATH=${1:-""}; node --inspect-brk x-pack/scripts/jest.js --runInBand $TESTS_PATH --watch -o; };f'
 
+  alias test-integration-lists='node ./x-pack/scripts/functional_tests --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
+  alias test-integration-server-lists='node ./x-pack/scripts/functional_tests_server --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
+  alias test-integration-runner-lists='node ./x-pack/scripts/functional_test_runner --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
+
+  # Work with E2E tests (Cypress)
+  alias test-cypress-ess='cd ./x-pack/test/security_solution_cypress && yarn cypress:open:ess && popd'
+  alias test-cypress-serverless='cd ./x-pack/test/security_solution_cypress && yarn cypress:open:serverless && popd'
+
+  # Backport a PR merged to the "main" branch
+  alias start-backport='echo "calling node scripts/backport --pr.. (please pass in PR number)" && node scripts/backport --pr'
+
+  # A few commands for bash to aid in your code searches.
+  # Paste the result of ownerpaths into your vscode "files to include" field to search all files we own.
+  alias codeowners='cat .github/CODEOWNERS | grep "security-solution\|security-detections-response\|security-detection-rule-management" | cut -d" " -f1 | sed "s@^/@@" | uniq'
+  alias ownerpaths='codeowners | paste -sd "," -'
+
+  #FTS debuggging
+  alias fts='node x-pack/scripts/functional_tests_server'
+  alias ftr='node x-pack/scripts/functional_test_runner'
+  # https://nodejs.org/en/learn/getting-started/debugging
+  alias fts_debug='node --inspect-wait x-pack/scripts/functional_tests_server'
+  alias ftr_debug='node --inspect-wait x-pack/scripts/functional_test_runner'
+
   # Work with API integration tests (FTR)
   #
   # Start test server:
@@ -89,31 +138,12 @@ kibana-init() {
   # node x-pack/scripts/functional_tests_server --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts
   # node x-pack/scripts/functional_test_runner --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts --include x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/bootstrap_prebuilt_rules.ts
 
+  alias fts27='node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts'
+  alias ftr27='node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts'
+
   alias fts87='node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
   alias ftr87='node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
 
-  alias test-integration-lists='node ./x-pack/scripts/functional_tests --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
-  alias test-integration-server-lists='node ./x-pack/scripts/functional_tests_server --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
-  alias test-integration-runner-lists='node ./x-pack/scripts/functional_test_runner --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
-
-  # Work with E2E tests (Cypress)
-  alias test-cypress-ess='cd ./x-pack/test/security_solution_cypress && yarn cypress:open:ess && popd'
-  alias test-cypress-serverless='cd ./x-pack/test/security_solution_cypress && yarn cypress:open:serverless && popd'
-
-  # Backport a PR merged to the "main" branch
-  alias start-backport='echo "HERE" && node scripts/backport'
-
-  # A few commands for bash to aid in your code searches.
-  # Paste the result of ownerpaths into your vscode "files to include" field to search all files we own.
-  alias codeowners='cat .github/CODEOWNERS | grep "security-solution\|security-detections-response\|security-detection-rule-management" | cut -d" " -f1 | sed "s@^/@@" | uniq'
-  alias ownerpaths='codeowners | paste -sd "," -'
-
-  #FTS debuggging
-  alias fts='node x-pack/scripts/functional_tests_server'
-  alias ftr='node x-pack/scripts/functional_test_runner'
-  # https://nodejs.org/en/learn/getting-started/debugging
-  alias fts_debug='node --inspect-wait x-pack/scripts/functional_tests_server'
-  alias ftr_debug='node --inspect-wait x-pack/scripts/functional_test_runner'
 
   # Extra stuff
   alias pr-files-by-owner='f() { (cd ${CODE_HOME}/elastic/kibana-operations/triage && node ./code-owners.js "$@"); unset -f f; }; f'
