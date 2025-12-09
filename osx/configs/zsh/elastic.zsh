@@ -96,6 +96,9 @@ kibana-init() {
   # Add --debug for showing circular dependencies that were whitelisted
   alias start-deps-check='node scripts/find_plugins_with_circular_deps'
 
+  # Regenerate types based on OpenAPI schema definitions
+  alias start-regenerate-openapi='node scripts/generate_openapi --rootDir ./x-pack/solutions/security/plugins/security_solution'
+
  # Work with unit tests (Jest)
   alias ut='f() { TESTS_PATH=${1:-""}; node x-pack/scripts/jest.js $TESTS_PATH -o; };f'
   # Run a single file with unit tests in watch mode: test-tdd x-pack/solutions/security/plugins/security_solution/path/to/my/file.test.ts
@@ -144,7 +147,6 @@ kibana-init() {
   alias fts87='node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
   alias ftr87='node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
 
-
   # Extra stuff
   alias pr-files-by-owner='f() { (cd ${CODE_HOME}/elastic/kibana-operations/triage && node ./code-owners.js "$@"); unset -f f; }; f'
   alias precommit='node scripts/precommit_hook.js'
@@ -159,6 +161,5 @@ kbn() {
   echo "kibana-init ${PWD_DIR/kibana-/}"
   kibana-init "${PWD_DIR/kibana-/}"
 }
-
 
 kbn

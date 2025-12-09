@@ -44,3 +44,24 @@ alias dotfp="$DOTFILES_PRIVATE_HOME"
 header() {
     echo "       ▪▪▪▪▪▪▪▪▪▪▪▪ [ $@ ] ▪▪▪▪▪▪▪▪▪▪▪▪"
 }
+
+# ------------------------------------------------------------------------------
+# Port forwarding 9200 to remote 'A la Carte' instances
+
+# https://kibana-a-la-carte.kbndev.co/
+
+portfwd() {
+  if [ -z "$1" ] || [ -z "$2" ]
+  then
+    echo " Please enter local port and remote hostname (to forward 9200 via SSH):"
+    echo " $ portfwd 9210 pr-243221-snapshots-initial-poc-option2.sdesalas.kbndev.co"
+    return
+  fi
+  echo "Forwarding port..\n"
+  echo "localhost:$1 --┐"
+  echo "                 └----> ${2}:9200\n"
+  sleep 2
+  echo "$ ssh -N -L ${1}:localhost:9200 kibana@${2}\n"
+  echo "Ctrl+C to stop"
+  ssh -N -L ${1}:localhost:9200 kibana@${2}
+}
