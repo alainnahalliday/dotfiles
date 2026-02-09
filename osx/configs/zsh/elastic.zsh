@@ -113,6 +113,12 @@ kibana-init() {
   alias test-cypress-ess='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:open:ess && popd'
   alias test-cypress-serverless='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:open:serverless && popd'
 
+  alias test-cypress-dw-ess='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:dw run && popd'
+  alias test-cypress-dw-serverless='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:dw:serverless run && popd'
+
+  alias test-cypress-osquery-ess='cd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:open && popd'
+  alias test-cypress-osquery-serverless='cd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:serverless:open && popd'
+  
   # Backport a PR merged to the "main" branch
   alias start-backport='echo "calling node scripts/backport --pr.. (please pass in PR number)" && cd $KIBANA_HOME && node scripts/backport --pr'
 
