@@ -78,8 +78,8 @@ kibana-init() {
   alias fed="header 'DEBUGGING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && debug-kibana"
 
   # Generate fake source events from Endpoint Security to be able to quickly generate detection alerts
-  alias seed-endpoint-data='cd $KIBANA_HOME/x-pack/solutions/security/plugins/security_solution && yarn test:generate --node http://elastic:changeme@127.0.0.1:${ES_DEV_PORT} --kibana http://elastic:changeme@0.0.0.0:${KIBANA_DEV_PORT}/kbn --numHosts=5 --numDocs=2 && popd'
-  alias seed-endpoint-data-serverless='cd $KIBANA_HOME/x-pack/solutions/security/plugins/security_solution && yarn test:generate:serverless-dev --numHosts=5 --numDocs=2 && popd'
+  alias seed-endpoint-data='pushd $KIBANA_HOME/x-pack/solutions/security/plugins/security_solution && yarn test:generate --node http://elastic:changeme@127.0.0.1:${ES_DEV_PORT} --kibana http://elastic:changeme@0.0.0.0:${KIBANA_DEV_PORT}/kbn --numHosts=5 --numDocs=2 && popd'
+  alias seed-endpoint-data-serverless='pushd $KIBANA_HOME/x-pack/solutions/security/plugins/security_solution && yarn test:generate:serverless-dev --numHosts=5 --numDocs=2 && popd'
 
   # Check the code for type errors using TypeScript
   alias start-type-check='cd $KIBANA_HOME && node scripts/type_check.js --project tsconfig.json ${PLUGIN_PATH}'
@@ -110,14 +110,14 @@ kibana-init() {
   alias test-integration-runner-lists='cd $KIBANA_HOME && node ./x-pack/scripts/functional_test_runner --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
 
   # Work with E2E tests (Cypress)
-  alias test-cypress-ess='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:open:ess && popd'
-  alias test-cypress-serverless='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:open:serverless && popd'
+  alias test-cypress-ess='pushd $KIBANA_HOME/x-pack/solutions/security/test/security_solution_cypress && yarn cypress:open:ess && popd'
+  alias test-cypress-serverless='pushd $KIBANA_HOME/x-pack/solutions/security/test/security_solution_cypress && yarn cypress:open:serverless && popd'
 
-  alias test-cypress-dw-ess='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:dw run && popd'
-  alias test-cypress-dw-serverless='cd $KIBANA_HOME/x-pack/test/security_solution_cypress && yarn cypress:dw:serverless run && popd'
+  alias test-cypress-dw-ess='pushd $KIBANA_HOME/x-pack/solutions/security/test/security_solution_cypress && yarn cypress:dw run && popd'
+  alias test-cypress-dw-serverless='pushd $KIBANA_HOME/x-pack/solutions/security/test/security_solution_cypress && yarn cypress:dw:serverless run && popd'
 
-  alias test-cypress-osquery-ess='cd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:open && popd'
-  alias test-cypress-osquery-serverless='cd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:serverless:open && popd'
+  alias test-cypress-osquery-ess='pushd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:open && popd'
+  alias test-cypress-osquery-serverless='pushd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:serverless:open && popd'
   
   # Backport a PR merged to the "main" branch
   alias start-backport='echo "calling node scripts/backport --pr.. (please pass in PR number)" && cd $KIBANA_HOME && node scripts/backport --pr'
@@ -153,19 +153,27 @@ kibana-init() {
   alias fts87='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
   alias ftr87='cd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
 
+  alias fts18='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts'
+  alias ftr18='cd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts'
   # Extra stuff
   alias pr-files-by-owner='f() { (cd ${CODE_HOME}/elastic/kibana-operations/triage && node ./code-owners.js "$@"); unset -f f; }; f'
   alias precommit='node scripts/precommit_hook.js'
   alias quick-checks='yarn quick-checks'
 }
 
-# Looks at name of current directory ($PWD) and replaces `kibana-` with empty string.
-# - If you are in `/home/user/kibana-main` it will run `kibana-init main`
-# - If you are in `/home/user/kibana-2nd` it will run `kibana-init 2nd`
+# Looks at $PWD for any path segment named `kibana-*` and inits to that version.
+# - If you are in `/home/user/kibana-main` or `/home/user/kibana-main/x-pack/...` it will run `kibana-init main`
+# - Uses the innermost (rightmost) kibana- directory in the path when multiple exist.
 kbn() {
-  PWD_DIR="${PWD##*/}"
-  echo "kibana-init ${PWD_DIR/kibana-/}"
-  kibana-init "${PWD_DIR/kibana-/}"
+  local version=""
+  for seg in ${(s:/:)PWD}; do
+    if [[ "$seg" == kibana-* ]]; then
+      version="${seg#kibana-}"
+    fi
+  done
+  if [[ -z "$version" ]]; then
+    version="main"
+  fi
+  kibana-init "$version"
 }
-
 kbn
