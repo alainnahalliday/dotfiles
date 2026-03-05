@@ -56,22 +56,22 @@ kibana-init() {
   alias clean-es-data='echo "Cleaning KIBANA_VERSION=${KIBANA_VERSION}" && rm -rf $ES_DATA_HOME && echo ".. Done!"'
 
   # Start bootstrap process because something in package.json changed
-  alias start-bootstrap='cd $KIBANA_HOME && nvm use && yarn kbn bootstrap && node scripts/build_kibana_platform_plugins'
+  alias start-bootstrap='pushd $KIBANA_HOME && nvm use && yarn kbn bootstrap && node scripts/build_kibana_platform_plugins && popd'
   # alias b="header 'ONLY BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap"
   alias start-bes="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH for \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-es"
   alias start-bess="header 'BOOTSTRAPPING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-bootstrap && header 'STARTING ELASTICSEARCH SERVERLESS \"kibana-$KIBANA_VERSION\"  on \"$CURRENT_BRANCH\" branch/version' && start-es-serverless"
 
 
   # Start Elasticsearch
-  alias start-es='cd $KIBANA_HOME && yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E http.port=${ES_DEV_PORT} -E transport.port=${ES_TRANSPORT_PORT}'
-  alias start-es-no-expensive-queries='cd $KIBANA_HOME && yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E search.allow_expensive_queries=false -E logger.org.elasticsearch.discovery=DEBUG'
-  alias start-es-serverless='cd $KIBANA_HOME && yarn es serverless --projectType security'
+  alias start-es='pushd $KIBANA_HOME && yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E http.port=${ES_DEV_PORT} -E transport.port=${ES_TRANSPORT_PORT} && popd'
+  alias start-es-no-expensive-queries='pushd $KIBANA_HOME && yarn es snapshot --license trial -E xpack.security.authc.api_key.enabled=true -E path.data=${ES_DATA_HOME} -E search.allow_expensive_queries=false -E logger.org.elasticsearch.discovery=DEBUG && popd'
+  alias start-es-serverless='pushd $KIBANA_HOME && yarn es serverless --projectType security && popd'
 
   # Start Kibana
-  alias start-kibana='cd $KIBANA_HOME && yarn start --server.basePath="/kbn" --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
-  alias start-kibana-serverless='cd $KIBANA_HOME && yarn serverless-security'
-  alias debug-kibana='cd $KIBANA_HOME && yarn debug --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
-  alias debug-break-kibana='cd $KIBANA_HOME && yarn debug-break --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=5601 --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT}'
+  alias start-kibana='pushd $KIBANA_HOME && yarn start --server.basePath="/kbn" --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --dev.basePathProxyTarget=${KIBANA_PROXY_PORT} && popd'
+  alias start-kibana-serverless='pushd $KIBANA_HOME && yarn serverless-security && popd'
+  alias debug-kibana='pushd $KIBANA_HOME && yarn debug --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=${KIBANA_DEV_PORT} --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT} && popd'
+  alias debug-break-kibana='pushd $KIBANA_HOME && yarn debug-break --elasticsearch.hosts="http://localhost:${ES_DEV_PORT}" --server.port=5601 --server.basePath="/kbn" --dev.basePathProxyTarget=${KIBANA_PROXY_PORT} && popd'
 
   alias fe="header 'STARTING \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-kibana"
   alias fes="header 'STARTING SERVERLESS \"kibana-$KIBANA_VERSION\" on \"$CURRENT_BRANCH\" branch/version' && start-kibana-serverless"
@@ -82,32 +82,49 @@ kibana-init() {
   alias seed-endpoint-data-serverless='pushd $KIBANA_HOME/x-pack/solutions/security/plugins/security_solution && yarn test:generate:serverless-dev --numHosts=5 --numDocs=2 && popd'
 
   # Check the code for type errors using TypeScript
-  alias start-type-check='cd $KIBANA_HOME && node scripts/type_check.js --project tsconfig.json ${PLUGIN_PATH}'
+  alias start-type-check='pushd $KIBANA_HOME && node scripts/type_check.js --project tsconfig.json ${PLUGIN_PATH} && popd'
 
   # Check the code for linting errors using ESLint
-  alias start-lint='cd $KIBANA_HOME && node scripts/eslint.js ${PLUGIN_PATH}'
-  alias start-lint-all='cd $KIBANA_HOME && node scripts/eslint.js'
+  alias start-lint='pushd $KIBANA_HOME && node scripts/eslint.js ${PLUGIN_PATH} && popd'
+  # Lint all repo files (ESLint + stylelint)
+  alias start-lint-all='pushd $KIBANA_HOME && yarn lint && popd'
 
   # Check the code for i18n issues
-  alias start-i18n-check='cd $KIBANA_HOME && node scripts/i18n_check --ignore-missing'
-  alias start-i18n-fix='cd $KIBANA_HOME && node scripts/i18n_check.js --fix'
+  alias start-i18n-check='pushd $KIBANA_HOME && node scripts/i18n_check --ignore-missing && popd'
+  alias start-i18n-fix='pushd $KIBANA_HOME && node scripts/i18n_check.js --fix && popd'
 
   # Check the code for circular dependencies
   # Add --debug for showing circular dependencies that were whitelisted
-  alias start-deps-check='cd $KIBANA_HOME && node scripts/find_plugins_with_circular_deps'
+  alias start-deps-check='pushd $KIBANA_HOME && node scripts/find_plugins_with_circular_deps && popd'
 
   # Regenerate types based on OpenAPI schema definitions
-  alias start-regenerate-openapi='cd $KIBANA_HOME && node scripts/generate_openapi --rootDir ./x-pack/solutions/security/plugins/security_solution'
+  alias start-regenerate-openapi='pushd $KIBANA_HOME && node scripts/generate_openapi --rootDir ./x-pack/solutions/security/plugins/security_solution && popd'
+
+  # Update OAS snapshots (same include-path list as CI, writes to oas_docs/)
+  alias update-oas-snapshots='pushd $KIBANA_HOME && node scripts/capture_oas_snapshot \
+    --include-path /api/status \
+    --include-path /api/alerting/rule/ \
+    --include-path /api/alerting/rules \
+    --include-path /api/actions \
+    --include-path /api/security/role \
+    --include-path /api/spaces \
+    --include-path /api/streams \
+    --include-path /api/fleet \
+    --include-path /api/saved_objects/_import \
+    --include-path /api/saved_objects/_export \
+    --include-path /api/maintenance_window \
+    --include-path /api/agent_builder \
+    --update && popd'
 
  # Work with unit tests (Jest)
-  alias ut='f() { TESTS_PATH=${1:-""}; cd $KIBANA_HOME && node x-pack/scripts/jest.js $TESTS_PATH -o; };f'
+  alias ut='f() { TESTS_PATH=${1:-""}; pushd $KIBANA_HOME && node x-pack/scripts/jest.js $TESTS_PATH -o && popd; };f'
   # Run a single file with unit tests in watch mode: test-tdd x-pack/solutions/security/plugins/security_solution/path/to/my/file.test.ts
-  alias test-tdd='f() { TESTS_PATH=${1:-""}; cd $KIBANA_HOME && node x-pack/scripts/jest.js $TESTS_PATH --watch -o; };f'
-  alias debug-tdd='f() { TESTS_PATH=${1:-""}; cd $KIBANA_HOME && node --inspect-brk x-pack/scripts/jest.js --runInBand $TESTS_PATH --watch -o; };f'
+  alias test-tdd='f() { TESTS_PATH=${1:-""}; pushd $KIBANA_HOME && node x-pack/scripts/jest.js $TESTS_PATH --watch -o && popd; };f'
+  alias debug-tdd='f() { TESTS_PATH=${1:-""}; pushd $KIBANA_HOME && node --inspect-brk x-pack/scripts/jest.js --runInBand $TESTS_PATH --watch -o && popd; };f'
 
-  alias test-integration-lists='cd $KIBANA_HOME && node ./x-pack/scripts/functional_tests --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
-  alias test-integration-server-lists='cd $KIBANA_HOME && node ./x-pack/scripts/functional_tests_server --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
-  alias test-integration-runner-lists='cd $KIBANA_HOME && node ./x-pack/scripts/functional_test_runner --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts'
+  alias test-integration-lists='pushd $KIBANA_HOME && node ./x-pack/scripts/functional_tests --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts && popd'
+  alias test-integration-server-lists='pushd $KIBANA_HOME && node ./x-pack/scripts/functional_tests_server --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts && popd'
+  alias test-integration-runner-lists='pushd $KIBANA_HOME && node ./x-pack/scripts/functional_test_runner --config ./x-pack/test/lists_api_integration/security_and_spaces/config.ts && popd'
 
   # Work with E2E tests (Cypress)
   alias test-cypress-ess='pushd $KIBANA_HOME/x-pack/solutions/security/test/security_solution_cypress && yarn cypress:open:ess && popd'
@@ -120,7 +137,7 @@ kibana-init() {
   alias test-cypress-osquery-serverless='pushd $KIBANA_HOME && yarn --cwd x-pack/platform/plugins/shared/osquery cypress:serverless:open && popd'
   
   # Backport a PR merged to the "main" branch
-  alias start-backport='echo "calling node scripts/backport --pr.. (please pass in PR number)" && cd $KIBANA_HOME && node scripts/backport --pr'
+  alias start-backport='echo "calling node scripts/backport --pr.. (please pass in PR number)" && pushd $KIBANA_HOME && node scripts/backport --pr && popd'
 
   # A few commands for bash to aid in your code searches.
   # Paste the result of ownerpaths into your vscode "files to include" field to search all files we own.
@@ -128,11 +145,11 @@ kibana-init() {
   alias ownerpaths='codeowners | paste -sd "," -'
 
   #FTS debuggging
-  alias fts='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server'
-  alias ftr='cd $KIBANA_HOME && node x-pack/scripts/functional_test_runner'
+  alias fts='pushd $KIBANA_HOME && node x-pack/scripts/functional_tests_server && popd'
+  alias ftr='pushd $KIBANA_HOME && node x-pack/scripts/functional_test_runner && popd'
   # https://nodejs.org/en/learn/getting-started/debugging
-  alias fts_debug='cd $KIBANA_HOME && node --inspect-wait x-pack/scripts/functional_tests_server'
-  alias ftr_debug='cd $KIBANA_HOME && node --inspect-wait x-pack/scripts/functional_test_runner'
+  alias fts_debug='pushd $KIBANA_HOME && node --inspect-wait x-pack/scripts/functional_tests_server && popd'
+  alias ftr_debug='pushd $KIBANA_HOME && node --inspect-wait x-pack/scripts/functional_test_runner && popd'
 
   # Work with API integration tests (FTR)
   #
@@ -147,14 +164,14 @@ kibana-init() {
   # node x-pack/scripts/functional_tests_server --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts
   # node x-pack/scripts/functional_test_runner --config x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/configs/ess.config.ts --include x-pack/test/security_solution_api_integration/test_suites/detections_response/rules_management/prebuilt_rules/management/trial_license_complete_tier/bootstrap_prebuilt_rules.ts
 
-  alias fts27='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts'
-  alias ftr27='cd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts'
+  alias fts27='pushd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts && popd'
+  alias ftr27='pushd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_creation/trial_license_complete_tier/configs/ess.config.ts && popd'
 
-  alias fts87='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
-  alias ftr87='cd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts'
+  alias fts87='pushd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts && popd'
+  alias ftr87='pushd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/solutions/security/test/security_solution_api_integration/test_suites/detections_response/rules_management/rule_management/basic_license_essentials_tier/configs/ess.config.ts && popd'
 
-  alias fts18='cd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts'
-  alias ftr18='cd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts'
+  alias fts18='pushd $KIBANA_HOME && node x-pack/scripts/functional_tests_server --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts && popd'
+  alias ftr18='pushd $KIBANA_HOME && node scripts/functional_test_runner --bail --config x-pack/platform/test/serverless/functional/configs/security/config.group9.ts && popd'
   # Extra stuff
   alias pr-files-by-owner='f() { (cd ${CODE_HOME}/elastic/kibana-operations/triage && node ./code-owners.js "$@"); unset -f f; }; f'
   alias precommit='node scripts/precommit_hook.js'
